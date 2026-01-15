@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "231671002979",
+    "project_id": "thesis-water",
+    "storage_bucket": "thesis-water.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231671002979:android:7ff61d49be5215d8210556",
+        "android_client_info": {
+          "package_name": "com.shivam.my_mobile_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrwQ3iFPUBUUF4FiRI4QfLnnqNoFJQoAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:231671002979:android:e9505fdb0a28501b210556",
+        "android_client_info": {
+          "package_name": "com.thesisapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDrwQ3iFPUBUUF4FiRI4QfLnnqNoFJQoAs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
