@@ -1,0 +1,33 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Checks if the user making the request is the owner of the device
+    function isDeviceOwner(deviceId) {
+      return request.auth != null &&
+             get(/databases/$(database)/documents/devices/$(deviceId)).data.owner_uid == request.auth.uid;
+    }
+
+    match /{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == "UIA1lk0byYUGj3YH5JMYr0j1UNF3";
+    }
+
+    match /devices/{deviceId} {
+      allow read: if resource.data.owner_uid == request.auth.uid;
+
+      // 1. User must be logged in.
+      // 2. User must set 'owner_uid' to their own ID.
+      // 3. Firestore rejects 'create' if the ID already exists (enforced by logic or rules structure).
+      allow create: if request.auth != null
+                    && request.resource.data.owner_uid == request.auth.uid;
+
+      allow update, delete: if resource.data.owner_uid == request.auth.uid;
+
+      match /readings/{readingId} {
+        allow read: if isDeviceOwner(deviceId);
+        allow create: if request.resource.data.keys().hasAll(['timestamp']);
+      }
+    }
+  }
+}
