@@ -1,5 +1,9 @@
-module.exports = {
-  arrowParens: 'avoid',
-  singleQuote: true,
-  trailingComma: 'all',
-};
+export const arrowParens = "avoid";
+export const singleQuote = true;
+export const trailingComma = "all";
+export const tabWidth = 4;
+export const useTabs = true;
+export const printWidth = 80;
+export const bracketSpacing = true;
+export const jsxBracketSameLine = false;
+export const endOfLine = "auto";

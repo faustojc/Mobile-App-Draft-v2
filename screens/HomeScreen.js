@@ -1,344 +1,197 @@
-import React, { useEffect, useState, useRef } from "react";
-import {
-  View,
-  Text,
-  StyleSheet,
-  ActivityIndicator,
-  ScrollView,
-} from "react-native";
-import firestore from "@react-native-firebase/firestore";
-import Icon from "react-native-vector-icons/MaterialCommunityIcons";
-import notifee, { AndroidImportance } from '@notifee/react-native';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, SafeAreaView, StatusBar, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AddDeviceModal from '../src/components/AddDeviceModal';
+import DeviceList from '../src/components/DeviceList';
+import { getMyDevices } from '../src/services/DeviceService';
 
-const HomeScreen = () => {
-  const [latestData, setLatestData] = useState(null);
+export default function HomeScreen() {
+  const [devices, setDevices] = useState([]);
   const [loading, setLoading] = useState(true);
-  const isFirstLoad = useRef(true); // Track first load to avoid notification on app open
+  const [showAddModal, setShowAddModal] = useState(false);
 
-  // Function to show notification
-  const showSensorNotification = async (data) => {
+  const refreshDashboard = async () => {
+    setLoading(true);
     try {
-      await notifee.displayNotification({
-        title: '🌊 New Water Quality Reading',
-        body: `Temp: ${data.temp}°C | pH: ${data.pH} | PPM: ${data.ppm}`,
-        android: {
-          channelId: 'sensor_readings',
-          importance: AndroidImportance.HIGH,
-          pressAction: {
-            id: 'default',
-            launchActivity: 'default',
-          },
-          sound: 'default',
-          vibrationPattern: [300, 500],
-          smallIcon: 'ic_launcher',
-          color: '#007AFF',
-        },
-      });
-      console.log('✅ Notification displayed');
-    } catch (error) {
-      console.error('❌ Error showing notification:', error);
+      const myList = await getMyDevices();
+      setDevices(myList);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    const unsubscribe = firestore()
-      .collection("params")
-      .orderBy("created_at", "desc")
-      .limit(1)
-      .onSnapshot(
-        (snapshot) => {
-          if (!snapshot.empty) {
-            const newData = snapshot.docs[0].data();
-            
-            // Only show notification if it's NOT the first load
-            if (!isFirstLoad.current && latestData) {
-              // Check if data actually changed
-              const hasChanged = 
-                newData.temp !== latestData.temp ||
-                newData.pH !== latestData.pH ||
-                newData.ppm !== latestData.ppm ||
-                newData.millisiemenspermeter !== latestData.millisiemenspermeter;
-              
-              if (hasChanged) {
-                console.log('🆕 New sensor reading detected!');
-                showSensorNotification(newData);
-              }
-            }
-            
-            setLatestData(newData);
-            
-            // Mark first load as complete
-            if (isFirstLoad.current) {
-              isFirstLoad.current = false;
-            }
-          }
-          setLoading(false);
-        },
-        (error) => {
-          console.error("❌ Firestore error:", error);
-          setLoading(false);
-        }
-      );
+  useEffect(() => { refreshDashboard(); }, []);
 
-    return () => unsubscribe();
-  }, [latestData]);
+  const ButtonPrimary = ({ title, onPress }) => (
+    <TouchableOpacity style={styles.primaryButton} onPress={onPress}>
+      <MaterialCommunityIcons name="plus-circle-outline" size={24} color="#FFF" />
+      <Text style={styles.primaryButtonText}>{title}</Text>
+    </TouchableOpacity>
+  );
+
+  const FabButton = ({ onPress }) => (
+    <TouchableOpacity style={styles.fab} onPress={onPress}>
+      <MaterialCommunityIcons name="plus" size={28} color="#FFF" />
+    </TouchableOpacity>
+  );
 
   if (loading) {
-    return (
-      <View style={styles.center}>
-        <ActivityIndicator size="large" color="#007AFF" />
-        <Text style={styles.loadingText}>Loading data...</Text>
-      </View>
-    );
-  }
-
-  if (!latestData) {
-    return (
-      <View style={styles.center}>
-        <Icon name="water-off" size={64} color="#CBD5E1" />
-        <Text style={styles.noDataText}>No recent sensor data available.</Text>
-      </View>
-    );
-  }
-
-  const SensorCard = ({ iconName, label, value, unit, color }) => (
-    <View style={styles.card}>
-      <View style={[styles.iconContainer, { backgroundColor: color + '15' }]}>
-        <Icon name={iconName} size={40} color={color} />
-      </View>
-      <View style={styles.cardContent}>
-        <Text style={styles.label}>{label}</Text>
-        <View style={styles.valueContainer}>
-          <Text style={[styles.value, { color: color }]}>{value}</Text>
-          <Text style={styles.unit}>{unit}</Text>
+     return (
+        <View style={styles.centerContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingText}>Loading Dashboard...</Text>
         </View>
+     );
+  }
+
+  // STATE 1: NEW USER (Empty State)
+  if (devices.length === 0) {
+    return (
+      <View style={styles.centerContainer}>
+        <View style={styles.iconCircle}>
+             <MaterialCommunityIcons name="water-plus" size={64} color="#007AFF" />
+        </View>
+        <Text style={styles.title}>Welcome to AquaTech</Text>
+        <Text style={styles.subtitle}>To begin, connect your first water sensor.</Text>
+
+        <ButtonPrimary
+          title="Connect Device"
+          onPress={() => setShowAddModal(true)}
+        />
+
+        <AddDeviceModal
+          visible={showAddModal}
+          onClose={() => setShowAddModal(false)}
+          onSuccess={() => {
+            setShowAddModal(false);
+            refreshDashboard();
+          }}
+        />
       </View>
-      <View style={[styles.cardAccent, { backgroundColor: color }]} />
-    </View>
-  );
+    );
+  }
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false}>
-      {/* Header Section */}
+    <SafeAreaView style={styles.container}>
+      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
       <View style={styles.header}>
-        <View style={styles.headerContent}>
-          <Icon name="waves" size={32} color="#007AFF" />
-          <View style={styles.headerTextContainer}>
-            <Text style={styles.title}>Water Quality</Text>
-            <Text style={styles.subtitle}>Real-time Monitoring</Text>
-          </View>
+        <View>
+            <Text style={styles.headerTitle}>Water Quality</Text>
+            <Text style={styles.headerSubtitle}>{devices.length} Active Sensors</Text>
         </View>
-        <View style={styles.statusBadge}>
-          <View style={styles.statusDot} />
-          <Text style={styles.statusText}>Live</Text>
-        </View>
+        <TouchableOpacity onPress={refreshDashboard}>
+            <MaterialCommunityIcons name="refresh" size={24} color="#007AFF" />
+        </TouchableOpacity>
       </View>
 
-      {/* Sensor Cards Grid */}
-      <View style={styles.cardsGrid}>
-        <SensorCard
-          iconName="thermometer"
-          label="Temperature"
-          value={latestData.temp}
-          unit="°C"
-          color="#FF6B6B"
-        />
-        
-        <SensorCard
-          iconName="flask"
-          label="pH Level"
-          value={latestData.pH}
-          unit=""
-          color="#4D96FF"
-        />
-        
-        <SensorCard
-          iconName="flash"
-          label="Conductivity"
-          value={latestData.millisiemenspermeter}
-          unit="mS/m"
-          color="#FFD93D"
-        />
-        
-        <SensorCard
-          iconName="water"
-          label="PPM"
-          value={latestData.ppm}
-          unit=""
-          color="#00C49A"
-        />
-      </View>
+      <DeviceList devices={devices} />
+      <FabButton onPress={() => setShowAddModal(true)} />
 
-      {/* Timestamp Footer */}
-      <View style={styles.footer}>
-        <Icon name="clock-outline" size={16} color="#94A3B8" />
-        <Text style={styles.timestamp}>
-          Last updated: {latestData.created_at 
-            ? new Date(latestData.created_at._seconds * 1000).toLocaleString()
-            : "N/A"}
-        </Text>
-      </View>
-
-      {/* Bottom Spacing */}
-      <View style={styles.bottomSpacer} />
-    </ScrollView>
+      <AddDeviceModal
+        visible={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSuccess={() => {
+          setShowAddModal(false);
+          refreshDashboard();
+        }}
+      />
+    </SafeAreaView>
   );
-};
+}
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
   },
-  center: {
+  centerContainer: {
     flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-    backgroundColor: "#F8FAFC",
+    backgroundColor: '#F8FAFC',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 30,
   },
   loadingText: {
-    marginTop: 12,
-    color: "#64748B",
-    fontSize: 16,
-    fontWeight: "500",
+    marginTop: 10,
+    color: '#64748B',
   },
-  noDataText: {
-    marginTop: 16,
-    color: "#64748B",
-    fontSize: 16,
-    fontWeight: "500",
-  },
-  header: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    paddingHorizontal: 20,
-    paddingTop: 24,
-    paddingBottom: 20,
-    backgroundColor: "#FFFFFF",
-    borderBottomLeftRadius: 24,
-    borderBottomRightRadius: 24,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    elevation: 3,
-  },
-  headerContent: {
-    flexDirection: "row",
-    alignItems: "center",
-  },
-  headerTextContainer: {
-    marginLeft: 12,
+  iconCircle: {
+    width: 120,
+    height: 120,
+    borderRadius: 60,
+    backgroundColor: '#E0F2FE',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 24,
   },
   title: {
     fontSize: 24,
-    fontWeight: "700",
-    color: "#1E293B",
-    letterSpacing: -0.5,
+    fontWeight: 'bold',
+    color: '#1E293B',
+    marginBottom: 8,
+    textAlign: 'center',
   },
   subtitle: {
-    fontSize: 14,
-    color: "#64748B",
-    marginTop: 2,
-    fontWeight: "500",
+    fontSize: 16,
+    color: '#64748B',
+    textAlign: 'center',
+    marginBottom: 32,
+    lineHeight: 24,
   },
-  statusBadge: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#ECFDF5",
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: 20,
-  },
-  statusDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-    backgroundColor: "#10B981",
-    marginRight: 6,
-  },
-  statusText: {
-    fontSize: 13,
-    fontWeight: "600",
-    color: "#059669",
-  },
-  cardsGrid: {
-    paddingHorizontal: 20,
-    paddingTop: 24,
-  },
-  card: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 20,
-    padding: 20,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+  primaryButton: {
+    flexDirection: 'row',
+    backgroundColor: '#007AFF',
+    paddingVertical: 14,
+    paddingHorizontal: 24,
+    borderRadius: 12,
+    alignItems: 'center',
     elevation: 4,
-    position: "relative",
-    overflow: "hidden",
+    shadowColor: '#007AFF',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
-  cardAccent: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    width: 4,
-  },
-  iconContainer: {
-    width: 68,
-    height: 68,
-    borderRadius: 16,
-    justifyContent: "center",
-    alignItems: "center",
-    marginRight: 16,
-  },
-  cardContent: {
-    flex: 1,
-  },
-  label: {
-    fontSize: 14,
-    color: "#64748B",
-    fontWeight: "600",
-    marginBottom: 6,
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  valueContainer: {
-    flexDirection: "row",
-    alignItems: "baseline",
-  },
-  value: {
-    fontSize: 32,
-    fontWeight: "700",
-    letterSpacing: -1,
-  },
-  unit: {
-    fontSize: 18,
-    fontWeight: "600",
-    color: "#94A3B8",
-    marginLeft: 6,
-  },
-  footer: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    marginTop: 32,
-    paddingHorizontal: 20,
-  },
-  timestamp: {
+  primaryButtonText: {
+    color: '#FFF',
+    fontSize: 16,
+    fontWeight: 'bold',
     marginLeft: 8,
-    fontSize: 14,
-    color: "#94A3B8",
-    fontWeight: "500",
   },
-  bottomSpacer: {
-    height: 32,
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+  },
+  headerTitle: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#0F172A',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#64748B',
+  },
+  fab: {
+    position: 'absolute',
+    bottom: 24,
+    right: 24,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#007AFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
   },
 });
-
-export default HomeScreen;

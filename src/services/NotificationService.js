@@ -1,7 +1,5 @@
-// src/services/NotificationService.js
 import notifee, { AndroidImportance } from '@notifee/react-native';
 
-// Create notification channel
 export const createNotificationChannel = async () => {
   await notifee.createChannel({
     id: 'sensor_readings',
@@ -12,7 +10,6 @@ export const createNotificationChannel = async () => {
   });
 };
 
-// Show notification for new sensor reading
 export const showSensorNotification = async (data) => {
   try {
     await notifee.displayNotification({
@@ -27,9 +24,9 @@ export const showSensorNotification = async (data) => {
         },
         sound: 'default',
         vibrationPattern: [300, 500],
-        smallIcon: 'ic_launcher', // Your custom icon
+        smallIcon: 'ic_launcher',
         color: '#007AFF',
-        largeIcon: require('../../assets/icon.png'), // Optional: large icon
+        largeIcon: require('../../assets/icon.png'),
       },
     });
     console.log('✅ Notification displayed');
@@ -38,7 +35,6 @@ export const showSensorNotification = async (data) => {
   }
 };
 
-// Show notification with custom message
 export const showCustomNotification = async (title, body) => {
   try {
     await notifee.displayNotification({

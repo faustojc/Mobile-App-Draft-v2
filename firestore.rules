@@ -1,0 +1,48 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+  
+    function isDeviceOwner(deviceId) {
+      // 1. User must be logged in
+      // 2. The device document must exist
+      // 3. The 'owner_uid' field on the device must match the user's UID
+      return request.auth != null && 
+             get(/databases/$(database)/documents/devices/$(deviceId)).data.owner_uid == request.auth.uid;
+    }
+
+		match /{document=**}{
+    	allow read, write: if request.auth != null && request.auth.uid == "UIA1lk0byYUGj3YH5JMYr0j1UNF3";
+      
+    	match /devices/{deviceId} {
+      
+      // READ: Only the owner can read the device info (e.g. name, status)
+      	allow read: if resource.data.owner_uid == request.auth.uid;
+
+      // CLAIMING (Create):
+      // Allows a user to create a document ONLY if they set themselves as owner.
+      	allow create: if request.auth != null 
+                    	&& request.resource.data.owner_uid == request.auth.uid;
+
+      // UPDATE/DELETE: Only the owner can rename or unclaim
+      	allow update, delete: if resource.data.owner_uid == request.auth.uid;
+
+
+      // 2. READINGS SUB-COLLECTION (Where Arduino writes)
+      	match /readings/{readingId} {
+        
+        // READ: Only the owner of the PARENT device can read these values
+        	allow read: if isDeviceOwner(deviceId);
+        
+        // WRITE (The Arduino):
+        // 1. Must be authenticated (Anonymous Auth from Arduino)
+        // 2. Must provide a timestamp (Basic validation)
+        // Note: We do NOT check ownership here because the Arduino
+        // creates the data, and the Arduino is not the "User".
+        	allow create: if request.auth != null 
+                      	&& request.resource.data.keys().hasAll(['timestamp']);
+        }
+      }
+    }
+  }
+}

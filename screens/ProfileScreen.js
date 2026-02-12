@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
+import auth from "@react-native-firebase/auth";
+import { useEffect, useState } from "react";
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
-  ScrollView,
-  Alert,
+	Alert,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
-import { logoutUser, getCurrentUser } from "../src/services/AuthService";
-import auth from "@react-native-firebase/auth";
+import { logoutUser } from "../src/services/AuthService";
 
 
 export default function ProfileScreen({ setIsLoggedIn }) {
@@ -90,7 +90,7 @@ export default function ProfileScreen({ setIsLoggedIn }) {
       {/* Account Details Section */}
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Account Details</Text>
-        
+
         <View style={styles.detailsCard}>
           <View style={styles.detailRow}>
             <View style={styles.iconWrapper}>

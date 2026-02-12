@@ -1,29 +1,51 @@
-import React, { useState, useEffect } from "react";
-import { Alert, ActivityIndicator, View } from "react-native";
-import { NavigationContainer } from "@react-navigation/native";
-import { createDrawerNavigator } from "@react-navigation/drawer";
-import messaging from "@react-native-firebase/messaging";
 import notifee, { AndroidImportance, EventType } from "@notifee/react-native";
+import messaging from "@react-native-firebase/messaging";
+import { createDrawerNavigator } from "@react-navigation/drawer";
+import { NavigationContainer } from "@react-navigation/native";
+import { createNativeStackNavigator } from "@react-navigation/native-stack";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, Alert, View } from "react-native";
 
-import HomeScreen from "./screens/HomeScreen";
-import RecordsScreen from "./screens/RecordsScreen";
-import HelpScreen from "./screens/HelpScreen";
 import ContactScreen from "./screens/ContactScreen";
-import ProfileScreen from "./screens/ProfileScreen";
+import HelpScreen from "./screens/HelpScreen";
+import HomeScreen from "./screens/HomeScreen";
 import LoginScreen from "./screens/LoginScreen";
+import ProfileScreen from "./screens/ProfileScreen";
+import RecordsScreen from "./screens/RecordsScreen";
 import { onAuthChanged } from "./src/services/AuthService";
 import { createNotificationChannel } from "./src/services/NotificationService";
 
 const Drawer = createDrawerNavigator();
+const Stack = createNativeStackNavigator();
+
+const HomeStack = () => (
+  <Stack.Navigator
+    screenOptions={{
+        headerStyle: { backgroundColor: '#FFF' },
+        headerTitleStyle: { fontWeight: 'bold' },
+        headerShadowVisible: false,
+    }}
+  >
+    <Stack.Screen
+        name="Dashboard"
+        component={HomeScreen}
+        options={{ headerShown: false }}
+    />
+    <Stack.Screen
+        name="Records"
+        component={RecordsScreen}
+        options={{ title: 'Device History' }}
+    />
+  </Stack.Navigator>
+);
 
 export default function App() {
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [initializing, setInitializing] = useState(true);
 
-  // ✅ Auth state listener
   useEffect(() => {
     let unsubscribe;
-    
+
     try {
       unsubscribe = onAuthChanged((user) => {
         setIsLoggedIn(!!user);
@@ -42,11 +64,9 @@ export default function App() {
     };
   }, []);
 
-  // ✅ Setup notifications
   useEffect(() => {
     async function setupNotifications() {
       try {
-        // Request permission
         const authStatus = await messaging().requestPermission();
         const enabled =
           authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
@@ -54,7 +74,7 @@ export default function App() {
 
         if (enabled) {
           console.log("✅ Notification permission granted");
-          
+
           // Get FCM token
           const token = await messaging().getToken();
           console.log("📱 FCM Token:", token);
@@ -62,16 +82,15 @@ export default function App() {
           Alert.alert("⚠️ Notifications Disabled", "Please enable notifications in settings.");
         }
 
-        // ✅ Create notification channels
-        await createNotificationChannel(); // Custom channel for sensor readings
+        await createNotificationChannel();
         await notifee.createChannel({
           id: 'default',
           name: 'Default Channel',
           importance: AndroidImportance.HIGH,
           sound: 'default',
+          vibration: true,
         });
 
-        // ✅ Foreground message handler
         const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
           console.log("📩 Foreground message received:", remoteMessage);
 
@@ -90,14 +109,12 @@ export default function App() {
           });
         });
 
-        // ✅ Handle notification press events
         notifee.onForegroundEvent(({ type, detail }) => {
           if (type === EventType.PRESS) {
             console.log('🔔 Notification pressed:', detail.notification);
           }
         });
 
-        // ✅ Check if app was opened from notification
         messaging().getInitialNotification().then((remoteMessage) => {
           if (remoteMessage) {
             console.log('📬 App opened from notification:', remoteMessage);
@@ -117,7 +134,6 @@ export default function App() {
     setupNotifications();
   }, []);
 
-  // ✅ Loading screen
   if (initializing) {
     return (
       <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
@@ -127,17 +143,34 @@ export default function App() {
   }
 
   const DrawerNavigator = () => (
-    <Drawer.Navigator initialRouteName="Home">
-      <Drawer.Screen name="Home" component={HomeScreen} />
-      <Drawer.Screen name="Records" component={RecordsScreen} />
-      <Drawer.Screen name="Help" component={HelpScreen} />
-      <Drawer.Screen name="Contact" component={ContactScreen} />
+    <Drawer.Navigator
+        initialRouteName="HomeStack"
+        screenOptions={{
+            headerShown: false
+        }}
+    >
       <Drawer.Screen
-        name="Profile"
-        children={(props) => (
-          <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />
-        )}
+        name="HomeStack"
+        component={HomeStack}
+        options={{
+            title: 'Home',
+            headerShown: false
+        }}
       />
+
+      <Drawer.Screen
+          name="Help"
+          component={HelpScreen}
+          options={{ headerShown: true }}
+      />
+      <Drawer.Screen
+          name="Contact"
+          component={ContactScreen}
+          options={{ headerShown: true }}
+      />
+      <Drawer.Screen name="Profile" options={{ headerShown: true }}>
+        {(props) => <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
+      </Drawer.Screen>
     </Drawer.Navigator>
   );
 

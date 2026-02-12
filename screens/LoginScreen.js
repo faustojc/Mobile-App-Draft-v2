@@ -1,21 +1,21 @@
-import React, { useState } from "react";
+import { useState } from "react";
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  Alert,
-  StyleSheet,
-  ActivityIndicator,
-  KeyboardAvoidingView,
-  Platform,
-  ScrollView,
+	ActivityIndicator,
+	Alert,
+	KeyboardAvoidingView,
+	Platform,
+	ScrollView,
+	StyleSheet,
+	Text,
+	TextInput,
+	TouchableOpacity,
+	View,
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import { loginUser, registerUser } from "../src/services/AuthService";
 
 export default function LoginScreen({ setIsLoggedIn }) {
-  const [isLogin, setIsLogin] = useState(true); // Toggle between login and register
+  const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -71,7 +71,7 @@ export default function LoginScreen({ setIsLoggedIn }) {
       );
     } catch (error) {
       let errorMessage = "Registration failed. Please try again.";
-      
+
       if (error.code === "auth/email-already-in-use") {
         errorMessage = "This email is already registered. Please login instead.";
       } else if (error.code === "auth/invalid-email") {
@@ -79,7 +79,7 @@ export default function LoginScreen({ setIsLoggedIn }) {
       } else if (error.code === "auth/weak-password") {
         errorMessage = "Password is too weak. Please use a stronger password.";
       }
-      
+
       Alert.alert("Registration Failed", errorMessage);
     } finally {
       setLoading(false);
