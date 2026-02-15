@@ -10,6 +10,7 @@ import {
 } from "react-native";
 import MaterialCommunityIcons from "react-native-vector-icons/MaterialCommunityIcons";
 import DateRangeFilter from "../src/components/DateRangeFilter";
+import DeviceSettingsModal from "../src/components/DeviceSettingsModal";
 import SensorChart from "../src/components/SensorChart";
 import { useFilteredSensorData } from "../src/hooks/useFilteredSensorData";
 
@@ -25,6 +26,7 @@ const RecordsScreen = ({ route, navigation }) => {
 
   // Enum: 'chart' | 'list' | 'both'
   const [viewMode, setViewMode] = useState("both");
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
 
   const {
     data: records,
@@ -37,7 +39,17 @@ const RecordsScreen = ({ route, navigation }) => {
 
   useEffect(() => {
     if (deviceName) {
-      navigation.setOptions({ title: `${deviceName} History` });
+      navigation.setOptions({
+        title: `${deviceName} History`,
+        headerRight: () => (
+          <TouchableOpacity
+            onPress={() => setShowSettingsModal(true)}
+            style={{ marginRight: 16 }}
+          >
+            <MaterialCommunityIcons name="cog" size={24} color="#007AFF" />
+          </TouchableOpacity>
+        ),
+      });
     }
   }, [deviceName, navigation]);
 
@@ -295,6 +307,12 @@ const RecordsScreen = ({ route, navigation }) => {
           showsVerticalScrollIndicator={false}
         />
       )}
+      <DeviceSettingsModal
+        visible={showSettingsModal}
+        onClose={() => setShowSettingsModal(false)}
+        deviceId={deviceId}
+        deviceName={deviceName}
+      />
     </View>
   );
 };
