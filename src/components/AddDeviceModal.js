@@ -10,7 +10,7 @@ import {
 	View,
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { claimDevice } from '../services/DeviceService';
+import { claimDevice, requestDeviceAccess } from '../services/DeviceService';
 
 const AddDeviceModal = ({ visible, onClose, onSuccess }) => {
 	const [deviceId, setDeviceId] = useState('');
@@ -31,7 +31,38 @@ const AddDeviceModal = ({ visible, onClose, onSuccess }) => {
 			setNickname('');
 			onSuccess(); // Refresh parent
 		} catch (error) {
-			Alert.alert('Failed to Add Device', error.message);
+			if (error.code === 'DEVICE_ALREADY_OWNED') {
+				Alert.alert(
+					'Device Already Linked',
+					'This device is owned by another user. Would you like to request access?',
+					[
+						{ text: 'Cancel', style: 'cancel' },
+						{
+							text: 'Request Access',
+							onPress: async () => {
+								try {
+									setLoading(true);
+									await requestDeviceAccess(error.deviceId);
+									Alert.alert(
+										'Request Sent',
+										'The owner has been notified.',
+									);
+									onClose();
+								} catch (reqError) {
+									Alert.alert(
+										'Request Failed',
+										reqError.message,
+									);
+								} finally {
+									setLoading(false);
+								}
+							},
+						},
+					],
+				);
+			} else {
+				Alert.alert('Failed to Add Device', error.message);
+			}
 		} finally {
 			setLoading(false);
 		}

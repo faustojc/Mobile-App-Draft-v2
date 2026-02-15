@@ -10,6 +10,7 @@ import ContactScreen from "./screens/ContactScreen";
 import HelpScreen from "./screens/HelpScreen";
 import HomeScreen from "./screens/HomeScreen";
 import LoginScreen from "./screens/LoginScreen";
+import NotificationsScreen from "./screens/NotificationsScreen";
 import ProfileScreen from "./screens/ProfileScreen";
 import RecordsScreen from "./screens/RecordsScreen";
 import { onAuthChanged } from "./src/services/AuthService";
@@ -21,20 +22,20 @@ const Stack = createNativeStackNavigator();
 const HomeStack = () => (
   <Stack.Navigator
     screenOptions={{
-        headerStyle: { backgroundColor: '#FFF' },
-        headerTitleStyle: { fontWeight: 'bold' },
-        headerShadowVisible: false,
+      headerStyle: { backgroundColor: "#FFF" },
+      headerTitleStyle: { fontWeight: "bold" },
+      headerShadowVisible: false,
     }}
   >
     <Stack.Screen
-        name="Dashboard"
-        component={HomeScreen}
-        options={{ headerShown: false }}
+      name="Dashboard"
+      component={HomeScreen}
+      options={{ headerShown: false }}
     />
     <Stack.Screen
-        name="Records"
-        component={RecordsScreen}
-        options={{ title: 'Device History' }}
+      name="Records"
+      component={RecordsScreen}
+      options={{ title: "Device History" }}
     />
   </Stack.Navigator>
 );
@@ -50,7 +51,10 @@ export default function App() {
       unsubscribe = onAuthChanged((user) => {
         setIsLoggedIn(!!user);
         if (initializing) setInitializing(false);
-        console.log("👤 Auth state changed:", user ? "Logged in" : "Logged out");
+        console.log(
+          "👤 Auth state changed:",
+          user ? "Logged in" : "Logged out",
+        );
       });
     } catch (error) {
       console.error("❌ Auth listener error:", error);
@@ -58,7 +62,7 @@ export default function App() {
     }
 
     return () => {
-      if (unsubscribe && typeof unsubscribe === 'function') {
+      if (unsubscribe && typeof unsubscribe === "function") {
         unsubscribe();
       }
     };
@@ -79,50 +83,57 @@ export default function App() {
           const token = await messaging().getToken();
           console.log("📱 FCM Token:", token);
         } else {
-          Alert.alert("⚠️ Notifications Disabled", "Please enable notifications in settings.");
+          Alert.alert(
+            "⚠️ Notifications Disabled",
+            "Please enable notifications in settings.",
+          );
         }
 
         await createNotificationChannel();
         await notifee.createChannel({
-          id: 'default',
-          name: 'Default Channel',
+          id: "default",
+          name: "Default Channel",
           importance: AndroidImportance.HIGH,
-          sound: 'default',
+          sound: "default",
           vibration: true,
         });
 
-        const unsubscribeForeground = messaging().onMessage(async (remoteMessage) => {
-          console.log("📩 Foreground message received:", remoteMessage);
+        const unsubscribeForeground = messaging().onMessage(
+          async (remoteMessage) => {
+            console.log("📩 Foreground message received:", remoteMessage);
 
-          await notifee.displayNotification({
-            title: remoteMessage.notification?.title || "New Sensor Data",
-            body: remoteMessage.notification?.body || "New reading received.",
-            android: {
-              channelId: 'default',
-              importance: AndroidImportance.HIGH,
-              pressAction: {
-                id: 'default',
+            await notifee.displayNotification({
+              title: remoteMessage.notification?.title || "New Sensor Data",
+              body: remoteMessage.notification?.body || "New reading received.",
+              android: {
+                channelId: "default",
+                importance: AndroidImportance.HIGH,
+                pressAction: {
+                  id: "default",
+                },
+                sound: "default",
+                smallIcon: "ic_launcher",
               },
-              sound: 'default',
-              smallIcon: 'ic_launcher',
-            },
-          });
-        });
+            });
+          },
+        );
 
         notifee.onForegroundEvent(({ type, detail }) => {
           if (type === EventType.PRESS) {
-            console.log('🔔 Notification pressed:', detail.notification);
+            console.log("🔔 Notification pressed:", detail.notification);
           }
         });
 
-        messaging().getInitialNotification().then((remoteMessage) => {
-          if (remoteMessage) {
-            console.log('📬 App opened from notification:', remoteMessage);
-          }
-        });
+        messaging()
+          .getInitialNotification()
+          .then((remoteMessage) => {
+            if (remoteMessage) {
+              console.log("📬 App opened from notification:", remoteMessage);
+            }
+          });
 
         messaging().onNotificationOpenedApp((remoteMessage) => {
-          console.log('📬 Notification opened app:', remoteMessage);
+          console.log("📬 Notification opened app:", remoteMessage);
         });
 
         return unsubscribeForeground;
@@ -136,7 +147,7 @@ export default function App() {
 
   if (initializing) {
     return (
-      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+      <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
         <ActivityIndicator size="large" color="#007AFF" />
       </View>
     );
@@ -144,29 +155,34 @@ export default function App() {
 
   const DrawerNavigator = () => (
     <Drawer.Navigator
-        initialRouteName="HomeStack"
-        screenOptions={{
-            headerShown: false
-        }}
+      initialRouteName="HomeStack"
+      screenOptions={{
+        headerShown: false,
+      }}
     >
       <Drawer.Screen
         name="HomeStack"
         component={HomeStack}
         options={{
-            title: 'Home',
-            headerShown: false
+          title: "Home",
+          headerShown: false,
         }}
       />
 
       <Drawer.Screen
-          name="Help"
-          component={HelpScreen}
-          options={{ headerShown: true }}
+        name="Help"
+        component={HelpScreen}
+        options={{ headerShown: true }}
       />
       <Drawer.Screen
-          name="Contact"
-          component={ContactScreen}
-          options={{ headerShown: true }}
+        name="Notifications"
+        component={NotificationsScreen}
+        options={{ headerShown: true, title: "Device Requests" }}
+      />
+      <Drawer.Screen
+        name="Contact"
+        component={ContactScreen}
+        options={{ headerShown: true }}
       />
       <Drawer.Screen name="Profile" options={{ headerShown: true }}>
         {(props) => <ProfileScreen {...props} setIsLoggedIn={setIsLoggedIn} />}
@@ -176,7 +192,11 @@ export default function App() {
 
   return (
     <NavigationContainer>
-      {isLoggedIn ? <DrawerNavigator /> : <LoginScreen setIsLoggedIn={setIsLoggedIn} />}
+      {isLoggedIn ? (
+        <DrawerNavigator />
+      ) : (
+        <LoginScreen setIsLoggedIn={setIsLoggedIn} />
+      )}
     </NavigationContainer>
   );
 }
