@@ -14,7 +14,18 @@ export const claimDevice = async (rawInput, nickname) => {
   const deviceRef = firestore().collection("devices").doc(deviceId);
 
   try {
-    const docSnap = await deviceRef.get();
+    let docSnap;
+    try {
+      docSnap = await deviceRef.get();
+    } catch (readError) {
+      if (readError.code === "firestore/permission-denied") {
+        const error = new Error("Device already owned");
+        error.code = "DEVICE_ALREADY_OWNED";
+        error.deviceId = deviceId;
+        throw error;
+      }
+      throw readError;
+    }
 
     if (docSnap.exists) {
       const data = docSnap.data();
@@ -40,6 +51,9 @@ export const claimDevice = async (rawInput, nickname) => {
     return true;
   } catch (error) {
     console.error("Claim Device Error:", error);
+    if (error.code === "DEVICE_ALREADY_OWNED") {
+      throw error;
+    }
     if (error.code === "firestore/permission-denied") {
       throw new Error(
         "Security Alert: Access to this device ID is restricted.",
@@ -61,19 +75,7 @@ export const requestDeviceAccess = async (deviceId) => {
     if (!deviceSnap.exists) throw new Error("Device not found.");
 
     const ownerUid = deviceSnap.data().owner_uid;
-    if (!ownerUid)
-      throw new Error("Device has no owner to request access from.");
-
-    // Check if already requested
-    const existingReq = await requestsRef
-      .where("deviceId", "==", deviceId)
-      .where("requesterUid", "==", user.uid)
-      .where("status", "==", "pending")
-      .get();
-
-    if (!existingReq.empty) {
-      throw new Error("Request already pending.");
-    }
+    if (!ownerUid) throw new Error("Device has no owner to request access from.");
 
     await requestsRef.add({
       deviceId,
@@ -96,13 +98,13 @@ export const getIncomingRequests = async () => {
   if (!user) return [];
 
   try {
-    const q = firestore()
+    const snapshot = await firestore()
       .collection("requests")
       .where("ownerUid", "==", user.uid)
       .where("status", "==", "pending")
-      .orderBy("timestamp", "desc");
+      .orderBy("timestamp", "desc")
+      .get();
 
-    const snapshot = await q.get();
     return snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
   } catch (error) {
     console.error("Error fetching requests:", error);
@@ -122,10 +124,8 @@ export const respondToRequest = async (
   const batch = firestore().batch();
   const requestRef = firestore().collection("requests").doc(requestId);
 
-  // Update request status
   batch.update(requestRef, { status: status });
 
-  // If accepted, add to device members
   if (status === "accepted") {
     const deviceRef = firestore().collection("devices").doc(deviceId);
     batch.update(deviceRef, {
@@ -172,7 +172,6 @@ export const getDeviceMembers = async (deviceId) => {
       emailMap[data.requesterUid] = data.requesterEmail;
     });
 
-    // Map members to objects
     const members = deviceData.members.map((uid) => {
       let email = emailMap[uid] || "Unknown";
       let role = "member";
@@ -229,7 +228,6 @@ export const getMyDevices = async () => {
   if (!user) return [];
 
   try {
-    // Query devices where I am a member (includes owner)
     const q = firestore()
       .collection("devices")
       .where("members", "array-contains", user.uid);

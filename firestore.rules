@@ -18,16 +18,15 @@ service cloud.firestore {
 
     // Device documents
     match /devices/{deviceId} {
-      // Owner AND Members can read device info
-      allow read: if resource.data.owner_uid == request.auth.uid ||
-                   (resource.data.members != null && request.auth.uid in resource.data.members);
+      // Any authenticated user can read device info (needed for sharing flow)
+      allow read: if request.auth != null;
 
       // User must set themselves as owner AND member
       allow create: if request.auth != null &&
                     request.resource.data.owner_uid == request.auth.uid &&
                     request.resource.data.members.hasAll([request.auth.uid]);
 
-      // (Admin/Owner only): Rename, add/remove members
+      // Owner only: rename, add/remove members
       allow update, delete: if resource.data.owner_uid == request.auth.uid;
 
       // Sensor readings sub-collection
@@ -37,9 +36,9 @@ service cloud.firestore {
       }
     }
 
-    // Device sharing requests — Owner-only access
+    // Device sharing requests
     match /requests/{requestId} {
-      // Any authenticated user can create a request for themselves
+      // Any authenticated user can create a request (must set their own UID)
       allow create: if request.auth != null && request.resource.data.requesterUid == request.auth.uid;
 
       // Only the device owner can read, update, or delete requests

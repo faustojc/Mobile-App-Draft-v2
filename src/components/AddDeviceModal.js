@@ -23,13 +23,14 @@ const AddDeviceModal = ({ visible, onClose, onSuccess }) => {
 			return;
 		}
 
+		const normalizedId = deviceId.replaceAll(/[:\-\s]/g, '').toUpperCase();
 		setLoading(true);
 		try {
 			await claimDevice(deviceId, nickname);
 			Alert.alert('Success', 'Device added successfully!');
 			setDeviceId('');
 			setNickname('');
-			onSuccess(); // Refresh parent
+			onSuccess();
 		} catch (error) {
 			if (error.code === 'DEVICE_ALREADY_OWNED') {
 				Alert.alert(
@@ -42,7 +43,7 @@ const AddDeviceModal = ({ visible, onClose, onSuccess }) => {
 							onPress: async () => {
 								try {
 									setLoading(true);
-									await requestDeviceAccess(error.deviceId);
+									await requestDeviceAccess(normalizedId);
 									Alert.alert(
 										'Request Sent',
 										'The owner has been notified.',
